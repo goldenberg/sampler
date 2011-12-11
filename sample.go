@@ -10,27 +10,58 @@ import (
 	"time"
 )
 
-var samplingProbability float64
-var reservoirSize uint
+var (
+	samplingProbability float64
+	reservoirSize       uint
+)
 
 func main() {
-	flag.Float64Var(&samplingProbability, "p", 0.5, "Sample lines at probability p in [0, 1].")
-	flag.UintVar(&reservoirSize, "r", 10, "Sample k lines.")
+	flag.Float64Var(&samplingProbability, "p", 0.0, "Sample lines at probability p in [0, 1].")
+	flag.UintVar(&reservoirSize, "r", 0, "Sample k lines.")
 	flag.Parse()
 
 	rand.Seed(time.Nanoseconds())
 
-	if flag.NArg() > 0 {
-		file, _ := os.Open(flag.Arg(0))
-		defer file.Close()
+	if reservoirSize > 0 && samplingProbability > 0.0 {
+		fmt.Println("You can specify either -p or -r, but not both.")
+		flag.PrintDefaults()
+		return
+	}
 
-		// sampleAtRate(file, samplingProbability, os.Stdout)
-		lines := reservoirSample(file, reservoirSize)
+	input := inputReader(flag.Args())
+
+	if samplingProbability > 0.0 {
+		sampleAtRate(input, samplingProbability, os.Stdout)
+	} else if reservoirSize > 0 {
+		lines := reservoirSample(input, reservoirSize)
+
 		for _, line := range lines {
 			fmt.Print(line)
 		}
-
 	}
+}
+
+func inputReader(args []string) (reader io.Reader) {
+	readers := make([]io.Reader, 0)
+
+	for _, arg := range args {
+		file, err := os.Open(arg)
+		//defer file.Close()
+
+		if arg == "-" {
+			readers = append(readers, os.Stdin)
+		}
+
+		if file != nil && err == nil {
+			readers = append(readers, file)
+		}
+	}
+
+	if len(readers) == 0 {
+		return os.Stdin
+	}
+
+	return io.MultiReader(readers...)
 }
 
 func sampleAtRate(reader io.Reader, rate float64, writer io.Writer) {
