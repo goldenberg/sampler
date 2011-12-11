@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-var samplingProbability float64 
+var samplingProbability float64
 var reservoirSize uint
 
 func main() {
@@ -36,8 +36,8 @@ func main() {
 func sampleAtRate(reader io.Reader, rate float64, writer io.Writer) {
 	bufReader := bufio.NewReader(reader)
 
-	for  {
-		line, err := bufReader.ReadBytes('\n');
+	for {
+		line, err := bufReader.ReadBytes('\n')
 		if err != nil {
 			break
 		}
@@ -55,13 +55,13 @@ func reservoirSample(reader io.Reader, numLines uint) (reservoir []string) {
 	var seen uint = 0
 
 	for {
-		line, err := bufReader.ReadString('\n')		
+		line, err := bufReader.ReadString('\n')
 		if err != nil {
 			break
 		}
 		if seen < numLines {
 			reservoir[seen] = line
-		} else if rand.Float64() < float64(numLines) / float64(seen) {
+		} else if rand.Float64() < float64(numLines)/float64(seen) {
 			reservoir[rand.Intn(int(numLines))] = line
 		}
 
@@ -69,6 +69,5 @@ func reservoirSample(reader io.Reader, numLines uint) (reservoir []string) {
 	}
 
 	return
-
 
 }
