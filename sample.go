@@ -100,5 +100,19 @@ func reservoirSample(reader io.Reader, numLines uint) (reservoir []string) {
 	}
 
 	return
+}
 
+func lineCount(reader io.Reader) (count uint) {
+	count = 0
+
+	bufReader := bufio.NewReader(reader)
+	
+	for c, err := bufReader.ReadByte() {
+		if err != nil {
+			return
+		}
+		if c == '\n' {
+			count++
+		}
+	}
 }
