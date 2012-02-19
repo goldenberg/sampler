@@ -1,26 +1,32 @@
 package main
 
 import (
-	"rand"
+	"math/rand"
 	"bufio"
 	"io"
 	"flag"
 	"fmt"
 	"os"
 	"time"
+	"strconv"
+	"strings"
 )
 
 var (
 	samplingProbability float64
 	reservoirSize       uint
+	splitStr string
+	outputFilename string
 )
 
 func main() {
 	flag.Float64Var(&samplingProbability, "p", 0.0, "Sample lines at probability p in [0, 1].")
 	flag.UintVar(&reservoirSize, "r", 0, "Sample k lines.")
+	flag.StringVar(&splitStr, "s", "", "Split ")
+	flag.StringVar(&outputFilename, "o", "", "Output file(s)")
 	flag.Parse()
 
-	rand.Seed(time.Nanoseconds())
+	rand.Seed(time.Now().UnixNano())
 
 	if reservoirSize > 0 && samplingProbability > 0.0 {
 		fmt.Println("You can specify either -p or -r, but not both.")
@@ -30,7 +36,11 @@ func main() {
 
 	input := inputReader(flag.Args())
 
-	if samplingProbability > 0.0 {
+	fmt.Println("asd")
+	if splitStr != "" {
+		fmt.Println("splittin", splitStr)
+		Split(input)
+	} else if samplingProbability > 0.0 {
 		sampleAtRate(input, samplingProbability, os.Stdout)
 	} else if reservoirSize > 0 {
 		lines := reservoirSample(input, reservoirSize)
@@ -39,6 +49,57 @@ func main() {
 			fmt.Print(line)
 		}
 	}
+}
+
+func Split(input io.Reader) {
+	weights := parseSplitWeights()
+	fmt.Println("Weights:", weights)
+	bufReader := bufio.NewReader(input)
+	writers := make(map[int]io.Writer)
+	for i, _ := range weights {
+		outName := fmt.Sprintf("%s_%d", outputFilename, i)
+		file, err := os.Create(outName)
+		if err != nil {
+			panic(fmt.Sprintf("Couldn't open %s", outName))
+		}
+		defer file.Close()
+
+		writers[i] = bufio.NewWriter(file)
+	}
+
+	for {
+		line, err := bufReader.ReadBytes('\n')
+		if err != nil {
+			break
+		}
+		r := rand.Float64()
+		for i, weight := range weights {
+			if r < weight {
+				_, err := writers[i].Write(line)
+				if err != nil {
+					panic("writing err")
+				}
+			}	
+		}
+	}
+	return
+}
+
+func parseSplitWeights() (splitWeights []float64)  {
+	splitWeights = make([]float64, 0)
+	weightSum := 0.0
+	fmt.Println("splitStr:", splitStr, ".")
+	for _, weightStr := range strings.Split(splitStr, ",") {
+		weight, err := strconv.ParseFloat(weightStr, 64)
+		if err != nil {
+			panic(fmt.Sprintf("Bad weight string: %s", weightStr))
+		}
+
+		splitWeights = append(splitWeights, weight)
+		weightSum += weight
+	}
+	splitWeights = append(splitWeights, 1. - weightSum)
+	return 
 }
 
 func inputReader(args []string) (reader io.Reader) {
@@ -107,7 +168,8 @@ func lineCount(reader io.Reader) (count uint) {
 
 	bufReader := bufio.NewReader(reader)
 	
-	for c, err := bufReader.ReadByte() {
+	for  {
+		c, err := bufReader.ReadByte()
 		if err != nil {
 			return
 		}
@@ -115,4 +177,5 @@ func lineCount(reader io.Reader) (count uint) {
 			count++
 		}
 	}
+	return
 }
