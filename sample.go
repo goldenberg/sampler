@@ -15,8 +15,8 @@ import (
 var (
 	samplingProbability float64
 	reservoirSize       uint
-	splitStr string
-	outputFilename string
+	splitStr            string
+	outputFilename      string
 )
 
 func main() {
@@ -79,13 +79,13 @@ func Split(input io.Reader) {
 				if err != nil {
 					panic("writing err")
 				}
-			}	
+			}
 		}
 	}
 	return
 }
 
-func parseSplitWeights() (splitWeights []float64)  {
+func parseSplitWeights() (splitWeights []float64) {
 	splitWeights = make([]float64, 0)
 	weightSum := 0.0
 	fmt.Println("splitStr:", splitStr, ".")
@@ -98,8 +98,8 @@ func parseSplitWeights() (splitWeights []float64)  {
 		splitWeights = append(splitWeights, weight)
 		weightSum += weight
 	}
-	splitWeights = append(splitWeights, 1. - weightSum)
-	return 
+	splitWeights = append(splitWeights, 1.-weightSum)
+	return
 }
 
 func inputReader(args []string) (reader io.Reader) {
@@ -167,8 +167,8 @@ func lineCount(reader io.Reader) (count uint) {
 	count = 0
 
 	bufReader := bufio.NewReader(reader)
-	
-	for  {
+
+	for {
 		c, err := bufReader.ReadByte()
 		if err != nil {
 			return
