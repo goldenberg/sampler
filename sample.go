@@ -1,15 +1,15 @@
 package main
 
 import (
-	"math/rand"
 	"bufio"
-	"io"
 	"flag"
 	"fmt"
+	"io"
+	"math/rand"
 	"os"
-	"time"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var (
@@ -34,12 +34,11 @@ func main() {
 		return
 	}
 
-
 	input := inputReader(flag.Args())
 
 	if splitStr != "" {
-		if (outputFilename == "") {
-			fmt.Println("To split input, you must specify an output base filename with -o.")	
+		if outputFilename == "" {
+			fmt.Println("To split input, you must specify an output base filename with -o.")
 			flag.PrintDefaults()
 			return
 		}
@@ -159,7 +158,7 @@ func reservoirSample(reader io.Reader, k uint) (reservoir []string) {
 		if n <= k {
 			reservoir[n-1] = line
 
-		// Replace a random element with probability k/n
+			// Replace a random element with probability k/n
 		} else if rand.Float64() < float64(k)/float64(n) {
 			reservoir[rand.Intn(int(k))] = line
 		}
