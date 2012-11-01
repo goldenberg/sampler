@@ -21,9 +21,9 @@ var (
 
 func main() {
 	flag.Float64Var(&samplingProbability, "p", 0.0, "Sample lines at probability p in [0, 1].")
-	flag.UintVar(&reservoirSize, "r", 0, "Sample k lines.")
-	flag.StringVar(&splitStr, "s", "", "Split ")
-	flag.StringVar(&outputFilename, "o", "", "Output file(s)")
+	flag.UintVar(&reservoirSize, "r", 0, "Sample exactly k lines.")
+	flag.StringVar(&splitStr, "s", "", "Split the input into n random subsets. Delimit weights with commas, e.g. 8,1,1. Weights will be normalized to sum to 1.")
+	flag.StringVar(&outputFilename, "o", "", "Output file(s). If not specified, write to stdout. Required and used as a basename for splitting. The basename will be appended with _1, _2, etc.")
 	flag.Parse()
 
 	rand.Seed(time.Now().UnixNano())
@@ -34,11 +34,15 @@ func main() {
 		return
 	}
 
+
 	input := inputReader(flag.Args())
 
-	fmt.Println("asd")
 	if splitStr != "" {
-		fmt.Println("splittin", splitStr)
+		if (outputFilename == "") {
+			fmt.Println("To split input, you must specify an output base filename with -o.")	
+			flag.PrintDefaults()
+			return
+		}
 		Split(input)
 	} else if samplingProbability > 0.0 {
 		sampleAtRate(input, samplingProbability, os.Stdout)
@@ -53,7 +57,6 @@ func main() {
 
 func Split(input io.Reader) {
 	weights := parseSplitWeights()
-	fmt.Println("Weights:", weights)
 	bufReader := bufio.NewReader(input)
 	writers := make(map[int]io.Writer)
 	for i, _ := range weights {
@@ -85,21 +88,22 @@ func Split(input io.Reader) {
 	return
 }
 
-func parseSplitWeights() (splitWeights []float64) {
-	splitWeights = make([]float64, 0)
-	weightSum := 0.0
-	fmt.Println("splitStr:", splitStr, ".")
+func parseSplitWeights() (weights []float64) {
+	weights = make([]float64, 0)
+	sum := 0.0
 	for _, weightStr := range strings.Split(splitStr, ",") {
-		weight, err := strconv.ParseFloat(weightStr, 64)
+		w, err := strconv.ParseFloat(weightStr, 64)
 		if err != nil {
 			panic(fmt.Sprintf("Bad weight string: %s", weightStr))
 		}
 
-		splitWeights = append(splitWeights, weight)
-		weightSum += weight
+		weights = append(weights, w)
+		sum += w
 	}
-	splitWeights = append(splitWeights, 1.-weightSum)
-	return
+	for i, w := range weights {
+		weights[i] = w / sum
+	}
+	return weights
 }
 
 func inputReader(args []string) (reader io.Reader) {
@@ -136,38 +140,37 @@ func sampleAtRate(reader io.Reader, rate float64, writer io.Writer) {
 
 		if rand.Float64() < rate {
 			writer.Write(line)
-			writer.Write([]uint8{'\n'})
 		}
 	}
 }
 
-func reservoirSample(reader io.Reader, numLines uint) (reservoir []string) {
-	reservoir = make([]string, numLines)
+func reservoirSample(reader io.Reader, k uint) (reservoir []string) {
+	reservoir = make([]string, k)
 	bufReader := bufio.NewReader(reader)
-	var seen uint = 0
+
+	var n uint = 0
 
 	for {
+		n++
 		line, err := bufReader.ReadString('\n')
 		if err != nil {
 			break
 		}
-		if seen < numLines {
-			reservoir[seen] = line
-		} else if rand.Float64() < float64(numLines)/float64(seen) {
-			reservoir[rand.Intn(int(numLines))] = line
-		}
+		if n <= k {
+			reservoir[n-1] = line
 
-		seen++
+		// Replace a random element with probability k/n
+		} else if rand.Float64() < float64(k)/float64(n) {
+			reservoir[rand.Intn(int(k))] = line
+		}
 	}
 
-	return
+	return reservoir
 }
 
 func lineCount(reader io.Reader) (count uint) {
 	count = 0
-
 	bufReader := bufio.NewReader(reader)
-
 	for {
 		c, err := bufReader.ReadByte()
 		if err != nil {
