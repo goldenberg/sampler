@@ -57,7 +57,9 @@ func main() {
 func Split(input io.Reader) {
 	weights := parseSplitWeights()
 	bufReader := bufio.NewReader(input)
-	writers := make(map[int]io.Writer)
+
+	// Create a set of writers, one per output split.
+	writers := make(map[int]io.Writer, len(weights))
 	for i, _ := range weights {
 		outName := fmt.Sprintf("%s_%d", outputFilename, i)
 		file, err := os.Create(outName)
@@ -75,11 +77,11 @@ func Split(input io.Reader) {
 			break
 		}
 		r := rand.Float64()
-		for i, weight := range weights {
-			if r < weight {
+		for i, w := range weights {
+			if r < w {
 				_, err := writers[i].Write(line)
 				if err != nil {
-					panic("writing err")
+					panic(fmt.Sprintf("Error %s writing to split %i", err, i)
 				}
 			}
 		}
