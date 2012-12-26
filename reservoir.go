@@ -9,7 +9,7 @@ type ReservoirSampler struct {
 	seen      int
 }
 
-func NewSampler(n int) *ReservoirSampler {
+func NewSampler(n uint) *ReservoirSampler {
 	return &ReservoirSampler{make([]interface{}, n), 0}
 }
 

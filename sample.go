@@ -24,6 +24,7 @@ func main() {
 	flag.UintVar(&reservoirSize, "r", 0, "Sample k lines.")
 	flag.StringVar(&splitStr, "s", "", "Split ")
 	flag.StringVar(&outputFilename, "o", "", "Output file(s)")
+	flag.BoolVar(&verbose, "v", false, "Print a live sample")
 	flag.Parse()
 
 	rand.Seed(time.Now().UnixNano())
@@ -39,6 +40,7 @@ func main() {
 
 	go func() {
 		readLines(input, lines)
+		close(lines)
 	}()
 
 	if splitStr != "" {
@@ -46,23 +48,28 @@ func main() {
 	} else if samplingProbability > 0.0 {
 		sampleAtRate(input, samplingProbability, os.Stdout)
 	} else if reservoirSize > 0 {
-		lines := reservoirSample(input, reservoirSize)
+		sampler := NewSampler(reservoirSize)
+		for line := range lines {
+			sampler.Add(line)
+		}
 
-		for _, line := range lines {
+		for _, line := range sampler.Sample() {
 			fmt.Print(line)
 		}
 	}
 }
 
-func readLines(input bufio.Reader, lines chan<- string) err {
+func readLines(input io.Reader, lines chan<- string) error {
+	in := bufio.NewReader(input)
 	for {
-		line, err := input.ReadString('\n')
+		line, err := in.ReadString('\n')
 		if err != nil {
-			return
+			return err
 		}
 
 		lines <- line
 	}
+	return nil
 }
 
 func Split(input io.Reader) {
