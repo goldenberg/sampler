@@ -1,15 +1,15 @@
 package main
 
 import (
-	"math/rand"
 	"bufio"
-	"io"
 	"flag"
 	"fmt"
+	"io"
+	"math/rand"
 	"os"
-	"time"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var (
@@ -35,10 +35,13 @@ func main() {
 	}
 
 	input := inputReader(flag.Args())
+	lines := make(chan string, 100)
 
-	fmt.Println("asd")
+	go func() {
+		readLines(input, lines)
+	}()
+
 	if splitStr != "" {
-		fmt.Println("splittin", splitStr)
 		Split(input)
 	} else if samplingProbability > 0.0 {
 		sampleAtRate(input, samplingProbability, os.Stdout)
@@ -48,6 +51,17 @@ func main() {
 		for _, line := range lines {
 			fmt.Print(line)
 		}
+	}
+}
+
+func readLines(input bufio.Reader, lines chan<- string) err {
+	for {
+		line, err := input.ReadString('\n')
+		if err != nil {
+			return
+		}
+
+		lines <- line
 	}
 }
 
@@ -139,28 +153,6 @@ func sampleAtRate(reader io.Reader, rate float64, writer io.Writer) {
 			writer.Write([]uint8{'\n'})
 		}
 	}
-}
-
-func reservoirSample(reader io.Reader, numLines uint) (reservoir []string) {
-	reservoir = make([]string, numLines)
-	bufReader := bufio.NewReader(reader)
-	var seen uint = 0
-
-	for {
-		line, err := bufReader.ReadString('\n')
-		if err != nil {
-			break
-		}
-		if seen < numLines {
-			reservoir[seen] = line
-		} else if rand.Float64() < float64(numLines)/float64(seen) {
-			reservoir[rand.Intn(int(numLines))] = line
-		}
-
-		seen++
-	}
-
-	return
 }
 
 func lineCount(reader io.Reader) (count uint) {
